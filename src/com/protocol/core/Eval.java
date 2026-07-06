@@ -1,5 +1,6 @@
 package com.protocol.core;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -9,34 +10,40 @@ public class Eval {
 
     private final Store store = new Store();
 
-    public void evalAndRespond(Rediscmd cmd, SocketChannel channel) throws Exception {
+    public void evalAndRespond(Rediscmd[] cmds, SocketChannel channel) throws Exception {
 
-        switch(cmd.getCmd()){
-            case "PING":
-                 evalPing(cmd.getArgs(), channel);
-                 break;
-            case "SET":
-                evalSet(cmd.getArgs(), channel);
-                break;
-            case "GET":
-                evalGet(cmd.getArgs(),  channel);
-                break;
-            case "TTL":
-                evalTtl(cmd.getArgs(), channel);
-                break;
-            case "DEL":
-                evalDel(cmd.getArgs(), channel);
-                 break;
-            case "EXPIRE":
-                evalExpire(cmd.getArgs(), channel);
-                break;
-            default:
-                 evalPing(cmd.getArgs(), channel);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
 
+        for(Rediscmd cmd : cmds) {
+            switch (cmd.getCmd()) {
+                case "PING":
+                    out.write(evalPing(cmd.getArgs()));
+                    break;
+                case "SET":
+                    out.write(evalSet(cmd.getArgs()));
+                    break;
+                case "GET":
+                    out.write(evalGet(cmd.getArgs()));
+                    break;
+                case "TTL":
+                    out.write(evalTtl(cmd.getArgs()));
+                    break;
+                case "DEL":
+                    out.write(evalDel(cmd.getArgs()));
+                    break;
+                case "EXPIRE":
+                    out.write(evalExpire(cmd.getArgs()));
+                    break;
+            }
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(out.toByteArray());
+
+        while (buffer.hasRemaining()) {
+            channel.write(buffer);
         }
     }
 
-    public void evalPing(String[] args, SocketChannel channel) throws Exception {
+    public byte[] evalPing(String[] args) throws Exception {
         byte[] b;
 
       if(args == null ){
@@ -47,13 +54,10 @@ public class Eval {
       }else{
           b = encode(args[0], false);
       }
-      ByteBuffer buffer = ByteBuffer.wrap(b);
-      channel.write(buffer);
-      buffer.clear();
+        return b;
     }
 
-    public void  evalSet(String[] args, SocketChannel channel) throws Exception{
-
+    public byte[]  evalSet(String[] args) throws Exception{
         byte[] b = new byte[512];
         String v = null;
         if(args.length <= 1){
@@ -91,12 +95,10 @@ public class Eval {
                  b =  ("+OK\r\n").getBytes(StandardCharsets.UTF_8);
             }
         }
-        ByteBuffer buffer = ByteBuffer.wrap(b);
-        channel.write(buffer);
-        buffer.clear();
+        return b;
     }
 
-    public void  evalGet(String[] args, SocketChannel channel) throws IOException {
+    public byte[] evalGet(String[] args) throws IOException {
         byte[] b = new byte[512];
         String v = null;
        if(args.length != 1){
@@ -114,12 +116,10 @@ public class Eval {
                b = encode(obj.value, false);
            }
        }
-        ByteBuffer buffer = ByteBuffer.wrap(b);
-        channel.write(buffer);
-        buffer.clear();
+        return b;
     }
 
-    public void evalTtl(String[] args, SocketChannel channel) throws IOException {
+    public byte[]  evalTtl(String[] args) throws IOException {
         byte[] b = new byte[512];
         String v = null;
         if(args.length != 1){
@@ -140,12 +140,10 @@ public class Eval {
                 b = encode((int)((obj.expiresAt - System.currentTimeMillis())/1000), false);
             }
         }
-        ByteBuffer buffer = ByteBuffer.wrap(b);
-        channel.write(buffer);
-        buffer.clear();
+        return b;
     }
 
-    public void evalDel(String[] args, SocketChannel channel) throws IOException {
+    public byte[] evalDel(String[] args) throws IOException {
         byte[] b = new byte[512];
         int countDeleted = 0;
         for(String key : args){
@@ -154,9 +152,7 @@ public class Eval {
             }
         }
         b =  encode(countDeleted, false);
-        ByteBuffer buffer = ByteBuffer.wrap(b);
-        channel.write(buffer);
-        buffer.clear();
+        return b;
     }
 
     public byte[] encode(Object value, boolean isSimple) {
@@ -177,7 +173,7 @@ public class Eval {
         }
     }
 
-    public void evalExpire(String[] args, SocketChannel channel) throws IOException {
+    public byte[] evalExpire(String[] args) throws IOException {
         byte[] b = new byte[512];
         String v = null;
         int exDurationSec = 0;
@@ -191,7 +187,7 @@ public class Eval {
             } catch(NumberFormatException e){
                 v = "(error) ERR value is not an integer or out of range";
                 b =  ("-" + v + "\r\n").getBytes(StandardCharsets.UTF_8);
-                return;
+                return b;
             }
             HmObject obj = store.get(key);
             //0 if the timeout was not set e.g. hey key doesn't exist, or operation skipped due to
@@ -203,8 +199,6 @@ public class Eval {
                 b = (":1\r\n").getBytes(StandardCharsets.UTF_8);
             }
         }
-        ByteBuffer buffer = ByteBuffer.wrap(b);
-        channel.write(buffer);
-        buffer.clear();
+        return b;
     }
 }

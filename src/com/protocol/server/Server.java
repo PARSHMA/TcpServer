@@ -68,7 +68,7 @@ public class Server {
 
     public void respond(Rediscmd cmd, SocketChannel channel) throws Exception {
         Eval eval = new Eval();
-        eval.evalAndRespond(cmd, channel);
+        //eval.evalAndRespond(cmd, channel);
     }
 
 

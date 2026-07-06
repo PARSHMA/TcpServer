@@ -2,6 +2,10 @@ package com.protocol.server;
 import com.protocol.core.Eval;
 import com.protocol.core.Expire;
 import com.protocol.core.Rediscmd;
+import com.protocol.resp.Resp;
+import com.protocol.resp.RespArray;
+import com.protocol.resp.RespSimpleString;
+import com.protocol.resp.RespType;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -14,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 public class AsyncServer {
 
@@ -88,7 +93,7 @@ public class AsyncServer {
                         continue;
                     }
 
-                    Rediscmd redisCmd =  readCommand(buffer);
+                    Rediscmd[] redisCmd =  readCommand(buffer);
                     respond(redisCmd, client);
                 }
                 keys.remove();
@@ -96,26 +101,108 @@ public class AsyncServer {
         }
     }
 
-    public Rediscmd readCommand(ByteBuffer buffer) throws Exception {
+    /*public Rediscmd readCommand(ByteBuffer buffer) throws Exception {
         buffer.flip();
+
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
-        //Resp resp = new Resp();
-        //String[] arr = resp.DecodeArrayFromString(data);
-        String str = new String(data, StandardCharsets.UTF_8).trim();
-        String[] arr = str.split(" ");
+
+        Resp resp = new Resp();
+        RespType respType = resp.Decode(data);
+
+        if (!(respType instanceof RespArray)) {
+            throw new IllegalArgumentException("Expected RESP Array");
+        }
+
+        RespArray respArray = (RespArray) respType;
+        List<RespType> values = respArray.getValues();
+
+        if (values.isEmpty()) {
+            throw new IllegalArgumentException("Empty command");
+        }
 
         Rediscmd redisCmd = new Rediscmd();
-        redisCmd.setCmd(arr[0]);
-        if(arr.length > 1){
-            redisCmd.setArgs(Arrays.copyOfRange(arr, 1, arr.length));
+
+        // First element is the command
+        redisCmd.setCmd(getStringValue(values.get(0)));
+
+        // Remaining elements are arguments
+        String[] args = new String[values.size() - 1];
+        for (int i = 1; i < values.size(); i++) {
+            args[i - 1] = getStringValue(values.get(i));
+        }
+        if(args.length == 0){
+            redisCmd.setArgs(null);
+        } else {
+            redisCmd.setArgs(args);
         }
 
         buffer.clear();
         return redisCmd;
+    }*/
+
+    public Rediscmd[] readCommand(ByteBuffer buffer) throws Exception {
+        buffer.flip();
+
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data);
+
+        Resp resp = new Resp();
+        List<RespType> respTypeList = resp.Decode(data);
+
+        Rediscmd[] redisCmds = new Rediscmd[respTypeList.size()];
+
+        for(int i = 0 ; i < respTypeList.size(); i++){
+            RespType respType =  respTypeList.get(i);
+
+            if (!(respType instanceof RespArray)) {
+                throw new IllegalArgumentException("Expected RESP Array");
+            }
+
+            RespArray respArray = (RespArray) respType;
+
+            List<RespType> values = respArray.getValues();
+
+            if (values.isEmpty()) {
+                throw new IllegalArgumentException("Empty command");
+            }
+
+            Rediscmd redisCmd = new Rediscmd();
+                // First element is the command
+            redisCmd.setCmd(getStringValue(values.get(0)));
+            // Remaining elements are arguments
+            String[] args = new String[values.size() - 1];
+            for(int j = 1 ; j < values.size(); j++) {
+                args[j - 1] = getStringValue(values.get(j));
+            }
+
+            if (args.length == 0) {
+                redisCmd.setArgs(null);
+            } else {
+                redisCmd.setArgs(args);
+            }
+            redisCmds[i] = redisCmd;
+        }
+        buffer.clear();
+        return redisCmds;
     }
 
-    public void respond(Rediscmd cmd, SocketChannel channel) throws Exception {
-        eval.evalAndRespond(cmd, channel);
+    private String getStringValue(RespType value) {
+      /*  if (value instanceof RespBulkString) {
+            return ((RespBulkString) value).getValue();
+        }*/
+
+
+        if (value instanceof RespSimpleString) {
+            return ((RespSimpleString) value).getValue();
+        }
+
+        throw new IllegalArgumentException(
+                "Unsupported RESP type: " + value.getClass().getSimpleName()
+        );
+    }
+
+    public void respond(Rediscmd[] cmds, SocketChannel channel) throws Exception {
+        eval.evalAndRespond(cmds, channel);
     }
 }
