@@ -1,0 +1,33 @@
+                                                      How Redis expires the keys
+
+In Redis, we can set expiry to keys Expire k 10
+
+Expire the key 'k' in '10' seconds
+
+Anyone trying to access the key after 10 seconds would get a 'nil'
+
+- no budern for manul del 
+- no memeory leaks
+-naturally filst in real products
+
+Redies Auto deletes key in 2 modes passive mode and active mode
+
+paasive mode
+
+A key is passively expired when some client tries to access it , and the key is found to be expired
+
+what about leys that are never accessed ?
+
+Active mode:
+ redies runs a loop
+10 times every seconds
+1 test random keys having some EXP set
+2 delete keys that are found to be expired
+3 if more than 25% keys were expired, repeat   
+
+usally it samples exactly 20 keys and how does it comes to this number 20 its (normal central limit theorem) google it
+
+sample is representative of population. if sample has more than 25% expired key,
+population would have the same proportion
+
+													  

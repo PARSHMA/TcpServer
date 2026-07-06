@@ -1,0 +1,72 @@
+                              The Redis Object
+							  
+Every single object we put in redies  is wrapped in a Redies Object
+
+so that we keep some meta info
+manage object state and expiration
+make common features agnostic
+
+
+Struct rediesObject{
+
+unsigned type: 4
+unsigned encoding: 4
+unsigned lru: LRU_BITS
+int refcount
+void *ptr
+}
+
+
+1 > instaed of assigning 4B to type & encoding
+ Redies saves memory by allocating a few bits
+ 
+ type ->     4 bits  \        
+ encoding -> 4 bits  / 1B
+ 
+ 2 void *ptr allows us to store/refer to any type of object
+ 3 refcount -> # when refcount = 0 frees the object
+ 4 lru takes up 24 bits -> 3 Bytes to store information about time and ferequency of access
+ 
+ 
+ 
+ Type and Encoding
+
+Redis supports 7 object types. Each object type can have one or more internal encodings.
+
+1. String
+   Encodings:
+   - raw
+   - int
+   - embstr (used for strings < 44 bytes)
+
+2. List
+   Encodings:
+   - ziplist
+   - linkedlist
+
+3. Set
+   Encodings:
+   - intset
+   - hashtable
+
+4. Sorted Set (ZSet)
+   Encodings:
+   - ziplist
+   - skiplist
+
+5. Hash
+   Encodings:
+   - ziplist
+   - hashtable
+
+6. Module
+
+7. Stream
+
+Notes:
+- Ziplist is memory-efficient and is used when the dataset is small.
+- When the data grows beyond a configured threshold, Redis switches to a more scalable encoding (e.g., hashtable or skiplist depending on the data type).
+- The object type visible to the client never changes (e.g., STRING, HASH, SET), only the internal encoding changes.
+ 
+ 
+

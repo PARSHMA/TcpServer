@@ -1,0 +1,105 @@
+Talking the Redis language
+
+For a Redis Server to understand what a client wants, the client needs to follow a protocal:
+
+Redis Serialization Protocol
+
+RESP supports common datatypes like: int, string and a way to convey errors
+
+Redis sends commmand as an array of string
+
+eg: put k, v is sent as  ["put", "k", "v"]
+
+Resp Description:
+
+Redis uses Resp as a request-response protocol
+
+i.e  client sends request in RESP
+     server response back in RESP
+
+Every data type starts with a special character and the data ends with \r\n (CRLF)
+
+Simple Strings: +PONG\r\n
+
+
+Simple strings start with a "+"
+Followed by the string "PONG"
+Followed by a CRLF "\r\n"
+
+
+Minimal overhead because it requires n + 3 bytes in response
+
+Integers: :1729\r\n
+
+Integers start with a ":"
+Followed by the integer "1729"
+Followed by the CRLF "\r\n"
+
+Bulk Strings: $4\r\nPONG\r\n
+
+Bulk strings start with a "$"
+Followed by the number of bytes
+Followed by a CRLF "\r\n"
+Followed by the actual string
+Followed by the CRLF "\r\n"
+
+Why do we need Bulk String if we have Simple strings?
+Simple strings are not binary safe → can contain any byte
+Simple strings cannot contain \r\n
+→ also a terminator
+Can be used to store any binary data
+↳ even a PNG image
+
+Some special strings
+
+Empty string: $0\r\n\r\n
+
+Null value: $-1\r\n
+
+length of -1 is a special value indicating lack of data
+
+Here’s the **exact content from your screenshot**, clean and ready to copy 👇
+
+---
+
+## Arrays
+
+Arrays start with a `"*"`
+Followed by the number of elements
+Followed by a CRLF `"\r\n"`
+Followed by RESP encoded elements
+
+Example:
+
+["a", 200, "cat"]
+
+
+*3\r\n
+$1\r\na\r\n
+:200\r\n
+$3\r\ncat\r\n
+
+---
+Null arrays are *-1\r\n
+Empty arrays are *0\r\n
+
+Note: we can also have nested arrays
+
+Errors : -key not found \r\n
+
+Error messsage starts with '-'
+followed by the message     
+followed by CRLF \r\n
+
+
+-----------
+
+Key HighLIghts:
+RSEP is human-readable
+RSEP is simple   ---> fewer bugs
+RSEP is performant
+RESP use prefixed lengths
+  |
+  |
+  we exactly know how many bytes to read & process
+

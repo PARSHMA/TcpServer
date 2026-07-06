@@ -1,0 +1,67 @@
+                                                        key eviction
+Redis is RAM -bound and we cannot have an unbounded-storage to accomodate any number of keys
+Hence to accomodate newer data, we have to evict some old data
+
+How Redis Evicts?
+
+
+REdis has a max memory configuration paramater (which is defined in redies.conf file) that limits the max amount of data it could hold
+when the redies data size hits the limit, it evicts some of the old data.
+The data that would be evicted depends on the eviction strategy configured, some of them are
+
+noeviction:  new values aren't saved when memeory limit is hits
+
+allkeys-lru: removes least recently used keys
+
+allkeys-lfu: removed leat frequently used keys
+
+volatile-lru: removed LRU keys with EXPIRE SET
+
+volatile-lfu: removed LFU keys with EXPIRE SET
+
+allkeys-random: picks some keys at random and evicts them
+
+volatile-random: picks some keys with EXPIRE set at random to evict
+
+volattile-tttl: picks keys with shortets TTL and evicts it
+
+Lets go deeper on Redies actually implements LRU
+-----------------------------------------
+Approximated LRU [Redies 3.0]
+
+Redies LRU is not an exact algorithm, instead it is approximated
+
+CORE IDEA: sample some keys and from them evict the one that is least recently used
+
+Bur why Redies does not use exact LRU?
+
+becauise it requires extra memory
+
+imagine maintaining a DLL(Double linked list) to maintain access. The additional memeory overhead of maintaining pointers is an overkill
+
+Redies would choose to use that mem for data & not
+
+In approximated LRU
+
+we can take 'n' samples each having 'k' keys and then evict the one which is least recently used
+
+more samples, better accuracy to evict the actual LRU key
+
+so these paramters are configurable, so you can check the redies.conf file to see these paaramters in action
+-----------------------------------------------------------------------------------------
+New LFU mode [Redies 4.0]
+
+LFU is least Frequesntly used hence Redies keeps track of frequency of key access.\
+
+Every time we get or update it does freq++
+
+when to use LFU ?
+
+use it when key that are used often should be kept in memory
+
+storing a huge integer value is costly , hence istead of using regular int to store ecaxt frequency , it used morries counter -> space efficent counting
+
+Note: frequncy is not ever-increasing it has a decay that with time reduces the value
+
+1 seperate counter at 1,000,000 requests
+2 decay the value every 1 minute

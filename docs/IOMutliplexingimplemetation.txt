@@ -1,0 +1,61 @@
+Asynchronous Networking supporting concurrent clients
+
+Most common way of supporting concurrrent client is
+Each clients -> its own thread
+Key challange:
+Making code Thread safe 
+Threads unnecessarily waits
+slows execution, increases complexity
+
+I/O Multiplexing: Async I/O programming  -> All event loops are implemented using this
+
+Python Async I/O, java script, libevent,libuv any concurrent single threaded app built with I/O Multiplexing 
+
+
+How to actually implement?
+
+we can implement I/O multiplexing using os kernal methods like
+
+EPOLL  --> LINUX
+KQueue ---> IOS
+IOCP  ---> WINDOWS
+
+In Linux every thing is considered as File, and each file has File descriptors
+EPOLL Monitors a lot of file descriptors for new I/O
+
+
+Refer I/O FLOW diagarm  for how I/O works
+
+so the above methods like EPOLL has acess to both user space and kernal space which help us to implement I/O Multiplexing
+-------------------------------------
+Core Idea
+
+We will continue doing our work,
+
+once a while check if someone is
+ready for an I/O   <--- EPOLL tells us this
+
+if yes, do the I/O
+if no, continue
+In UNIX everything is a file, hence they have a File Descriptor -> 32 bit integer value that uniquely  identifies a file - Disk or Socket
+
+            |
+    -----------------
+    |               |
+ Disk I/O      Network I/O
+
+
+Hence we ask EPOLL to monitore every single client connection along with the main server socket
+
+we create a new EPoller with epoll_create1
+But, how would we know when some I/O is ready?
+epoll_wait -> waits for updates on Registered FOs
+This is a blocking call, and it moves forward only where some FDs are ready for I/O
+
+we register/deregister File Descriptors with epoll_ctl
+                             ↓
+			pipes, FIFO, sockets, inotify, devices etc
+			
+
+						
+

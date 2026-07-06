@@ -1,0 +1,261 @@
+# Redis
+
+**Redis** is an **open-source, in-memory data structure store**.
+
+It can be used as:
+
+* Database
+* Cache
+* Message broker
+* Streaming engine
+
+---
+
+# Data Structures Provided by Redis
+
+Redis supports multiple built-in data structures:
+
+* Hash
+* List
+* Set
+* Sorted Set
+* Bitmap
+* HyperLogLog
+* Geospatial Indexes
+* Streams
+
+---
+Applications Built Using Redis Data Structures
+
+These data structures can be used to build a variety of applications:
+
+Real-time chat
+Message buffers
+Gaming leaderboards
+Auth session store
+Media streaming
+Real-time analytics
+---------
+Here’s the **clean notes content** from the image:
+
+---
+
+# What Makes Redis Special?
+
+### 1. Atomic Operations
+
+Every operation in Redis is **atomic**.
+
+Examples:
+
+* Putting a key
+* Adding to a list
+* Set union / intersection
+* Incrementing a value
+
+atomic in the sensee
+👉 When a command is executing
+* Redis **does not context switch**
+* It **does not execute another command in between**
+
+---
+
+### 2. In-Memory Storage
+
+* Data is stored **in memory (RAM)**
+* This makes Redis extremely fast
+
+👉 Because of this, the most common use of Redis is Caching
+
+
+Although Redis is in-memory, it also provides configurable persistence options:
+
+Periodically dumping data to disk (RDB snapshots)
+Write-ahead log of all commands (AOF – Append Only File)
+Option to disable persistence completely
+
+This lets you balance between:
+
+Performance (RAM-based)
+Durability (disk storage)
+
+------------------------------------
+
+Other Key Features of Redis
+Transactions
+Publish / Subscribe (Pub/Sub)
+TTL (Time-To-Live) on keys
+LRU eviction (Least Recently Used cache eviction policy)
+----------------
+Concurrent Programming Model(Single process)
+
+concurrent programming ia all about doing more than one thing at the same time
+
+Multi-Threading
+
+Each incoming request over the network is accepted by the server and executed in a seperate thread
+
+exmaple:
+
+R1 -> increment k -> T1
+R2 -> increment k -> T2
+
+how to ensure data correctness?
+
+## **Ensuring Data Correctness in Multithreading**
+
+### **Problem**
+
+* Suppose:
+
+  * `k = 10`
+  * Two threads are executing `k++` concurrently
+* Possible final values of `k`:
+
+  * `11` ✅ (correct if operations are synchronized)
+  * `12` ❌ (race condition)
+
+### **Why this happens**
+
+* `k++` is **not atomic**
+  It involves:
+
+  1. Read `k`
+  2. Increment
+  3. Write back
+
+* When two threads interleave these steps, **data inconsistency** occurs.
+
+---
+
+### **Solution: Critical Section**
+
+* A **critical section** is a part of code where shared data is accessed.
+* Only **one thread should execute it at a time**.
+* Other threads must **wait**.
+
+---
+
+## **How to Safeguard Data**
+
+### **1. Mutex (Mutual Exclusion)**
+
+* Allows only **one thread** to access the critical section.
+* Other threads are blocked until the lock is released.
+
+### **2. Semaphores**
+
+* Used to control access using a counter.
+* Can allow **multiple threads** (depending on the count), unlike mutex.
+
+---
+
+## **Type of Locking**
+
+### **Pessimistic Locking**
+
+* Assumes conflicts **will happen**
+* Locks the resource **before** accessing it
+* Examples:
+
+  * Mutex
+  * Semaphores
+
+---
+
+## **Locks in Practice**
+
+### **Acquire Lock**
+
+```text
+lock()
+k++
+unlock()
+```
+
+* Ensures only one thread modifies `k` at a time.
+---------
+Here’s the **clean, exact note-style content** from your image:
+
+---
+
+## **I/O Multiplexing (Apparent Concurrency)**
+
+* This is how **event loops** are implemented.
+
+---
+
+### **Problem with I/O**
+
+* I/O system calls are **blocking**
+* Example: reading from a socket
+
+```text
+read() blocks until the other person sends
+```
+
+* Hence, we **cannot just invoke `read()` on a socket**
+* Unless we know that the **other party will send data**
+
+---
+
+### **Implication**
+
+* Handling each connection on a **separate thread is possible**
+* While one thread is blocked on `read()`,
+  other threads can continue execution
+
+can we do something that does not keeps us waiting on the I/O?
+
+and can notify us when there is some movement?
+
+### **Key Idea**
+
+* Instead of blocking per thread:
+
+  * Use **I/O Multiplexing**
+  * Achieve **apparent concurrency** using a **single thread (event loop)**
+
+Use I/O monitoring calls to monitor the sockets and fire "read" on the ones that have some data
+
+
+    Single
+    Thread
+         |
+         |------------------------------------------------
+         |        } Accept incoming TCP connection
+         |------------------------------------------------
+         |        → read from one socket
+         |------------------------------------------------
+         |        } execute He incoming commands
+         |------------------------------------------------
+         |        → read from one socket
+         |------------------------------------------------
+         |        } execute He incoming commands
+         |------------------------------------------------
+         |        } Accept incoming TCP connection
+         |------------------------------------------------
+         |        → read from one socket
+         |------------------------------------------------
+         |        } execute He incoming com
+         |------------------------------------------------
+
+    * There is no separate process
+    * There is no separate thread
+
+
+    What Redis exploits ?
+
+    Network I/O is slow        → waiting to receive commands
+
+    In-memory ops is fast     → upon receiving commands Redis can very quickly execute them
+
+    This is why Redis made this concious decision
+
+    of keeping itself
+
+    1. Single Threaded        → No need of mutex, semaphores
+                                waiting
+
+    2. Doing I/O Multiplexing  → handling multiple TCP
+
