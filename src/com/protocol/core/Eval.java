@@ -1,5 +1,8 @@
 package com.protocol.core;
 
+import com.protocol.common.ObjectUtils;
+import com.protocol.common.RedisConstants;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,6 +37,8 @@ public class Eval {
                 case "EXPIRE":
                     out.write(evalExpire(cmd.getArgs()));
                     break;
+                case "INCR":
+                    out.write(evalINCR(cmd.getArgs()));
             }
         }
         ByteBuffer buffer = ByteBuffer.wrap(out.toByteArray());
@@ -66,6 +71,7 @@ public class Eval {
           } else {
             String key = args[0];
             String value = args[1];
+            byte[] byteArray=ObjectUtils.deduceTypeEncoding(value);
             int exDurationMs = -1;
             for(int i=2; i < args.length; i++ ){
                 switch(args[i]){
@@ -91,7 +97,7 @@ public class Eval {
                 }
             }
             if(v == null){
-                store.set(key, value,exDurationMs);
+                store.set(key, value,exDurationMs, byteArray[0], byteArray[1]);
                  b =  ("+OK\r\n").getBytes(StandardCharsets.UTF_8);
             }
         }
@@ -200,5 +206,33 @@ public class Eval {
             }
         }
         return b;
+    }
+
+    public byte[] evalINCR(String[] args){
+        byte[] b = new byte[512];
+        String v = null;
+
+        if(args.length != 1) {
+            v = "(error) ERR wrong number of arguments for 'incr' command";
+            b = ("-" + v + "\r\n").getBytes(StandardCharsets.UTF_8);
+            return b;
+        }
+        String key = args[0];
+        HmObject obj = store.get(key);
+        if(obj == null){
+            obj = store.newObj("0", -1, RedisConstants.OBJ_TYPE_STRING, RedisConstants.OBJ_ENCODING_INT);
+            store.set(key, "0",-1, RedisConstants.OBJ_TYPE_STRING, RedisConstants.OBJ_ENCODING_INT);
+        }
+        int i = Integer.parseInt(obj.value.toString());
+        i++;
+        store.set(
+                key,
+                String.valueOf(i),
+                -1,
+                RedisConstants.OBJ_TYPE_STRING,
+                RedisConstants.OBJ_ENCODING_INT
+        );
+         b = encode(i,false);
+         return b;
     }
 }

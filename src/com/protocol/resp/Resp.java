@@ -25,16 +25,12 @@ public class Resp {
         byte prefix = data[offset];
         switch (prefix) {
             case '+':
-                System.out.println("simple");
                 return readSimpleString(data, offset);
             case ':':
-                System.out.println("integer");
                 return readInteger(data, offset);
             case '$':
-                System.out.println("bulk");
                 return readBulkString(data, offset);
             case '*':
-                System.out.println("in array");
                 return readArray(data, offset);
             //case '-': this for decoding errors
 

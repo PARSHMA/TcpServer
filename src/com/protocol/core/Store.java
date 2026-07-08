@@ -23,21 +23,24 @@ public class Store {
         return hmObjectMap;
     }
 
-    public  HmObject newObj(Object value, long durationMs) {
+    public  HmObject newObj(Object value, long durationMs, byte objectType,
+                            byte objectEncoding) {
         long expiresAt = -1;
 
         if (durationMs > 0) {
             expiresAt = System.currentTimeMillis() + durationMs;
         }
 
-        return new HmObject(value, expiresAt);
+
+        byte typeEncoding = (byte) (objectType | objectEncoding);
+        return new HmObject(value, expiresAt, typeEncoding);
     }
 
-    public  void set(String key, Object value, long durationMs) {
+    public  void set(String key, Object value, long durationMs, byte objectType, byte objectEncoding) {
         if(hmObjectMap.size()>= KEYS_LIMIT){
             eviction.evict();
         }
-        hmObjectMap.put(key, newObj(value, durationMs));
+        hmObjectMap.put(key, newObj(value, durationMs, objectType, objectEncoding));
     }
 
     public  HmObject get(String key) {
